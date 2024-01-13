@@ -8,7 +8,8 @@ import openai
 import pygame
 
 load_dotenv()
-openai.api_key = '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'
+OPENAI_KEY = os.getenv('OPENAI_KEY')
+openai.api_key = OPENAI_KEY
 
 def SpeakText(command):
     tts = gTTS(text=command, lang='en')
