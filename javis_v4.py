@@ -1,66 +1,59 @@
-import pyttsx3
-from gtts import gTTS
-import speech_recognition as sr
-import os
-import threading
-from dotenv import load_dotenv
 import openai
-import pygame
+import speech_recognition as sr
+from gtts import gTTS
+from playsound import playsound
 
-load_dotenv()
-OPENAI_KEY = os.getenv('OPENAI_KEY')
-openai.api_key = OPENAI_KEY
+# Set your OpenAI GPT API key
+openai.api_key = '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'
 
-def SpeakText(command):
-    tts = gTTS(text=command, lang='en')
-    tts.save('output.mp3')
-    play_audio()
+def text_generation(prompt):
+    response = openai.Completion.create(
+        engine="davinci-codex",  # Use the GPT-3 engine
+        prompt=prompt,
+        max_tokens=100
+    )
+    return response['choices'][0]['text'].strip()
 
-def play_audio():
-    pygame.mixer.init()
-    pygame.mixer.music.load('output.mp3')
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-
-r = sr.Recognizer()
-
-def record_text():
+def speech_recognition():
     recognizer = sr.Recognizer()
 
     with sr.Microphone() as source:
-        print("Listing...")
+        print("Listening...")
         recognizer.adjust_for_ambient_noise(source, duration=1)
         audio = recognizer.listen(source, timeout=5)
 
     try:
+        print("Recognizing...")
         text = recognizer.recognize_google(audio)
-        print("You said:", text)
+        print(f"You said: {text}")
         return text
     except sr.UnknownValueError:
-        print("Could not understand audio.")
-        return None
+        print("Sorry, could not understand audio.")
+        return ""
     except sr.RequestError as e:
         print(f"Could not request results from Google Speech Recognition service; {e}")
-        return None
+        return ""
 
-def send_to_ChatGPT(messages, model="gpt-3.5-turbo"):
-    response = openai.ChatCompletion.create(
-        model=model,
-        messages=messages,
-        max_tokens=100,
-        n=1,
-        stop=None,
-        temperature=0.5 
-    )
-    message = response.choices[0].message.content
-    messages.append(response.choices[0].message)
-    return message
+def speech_synthesis(text):
+    tts = gTTS(text=text, lang='en')
+    tts.save("output.mp3")
+    playsound("output.mp3")
 
-messages = [{"role": "user", "content": "Please act like Jarvis from Iron man."}]
-while True:
-    text = record_text()
-    messages.append({"role": "user", "content": text})
-    response = send_to_ChatGPT(messages)
-    SpeakText(response)
-    print(response)
+def main():
+    while True:
+        # Step 1: Speech Recognition
+        user_input = speech_recognition()
+
+        # Break the loop if no user input is detected
+        if not user_input:
+            break
+
+        # Step 2: Text-to-Text Generation
+        ai_response = text_generation(user_input)
+
+        # Step 3: Speech Synthesis
+        print(f"AI: {ai_response}")
+        speech_synthesis(ai_response)
+
+if __name__ == "__main__":
+    main()
